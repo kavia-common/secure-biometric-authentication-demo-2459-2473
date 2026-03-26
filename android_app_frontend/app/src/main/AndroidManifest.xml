@@ -8,6 +8,12 @@
         android:theme="@style/Theme.SecureBiometricDemo">
 
         <activity
+            android:name=".HomeActivity"
+            android:exported="false"
+            android:label="@string/title_home"
+            android:theme="@style/Theme.SecureBiometricDemo" />
+
+        <activity
             android:name=".MainActivity"
             android:exported="true">
 

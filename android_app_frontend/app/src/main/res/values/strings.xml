@@ -15,6 +15,10 @@
     <string name="action_unlock">Unlock (biometric)</string>
     <string name="action_call_protected">Call protected endpoint</string>
     <string name="action_logout">Logout (clear tokens)</string>
+    <string name="action_logout_short">Logout</string>
+
+    <string name="title_home">Home</string>
+    <string name="home_body">You are signed in.</string>
 
     <string name="section_status_log">Status log</string>
     <string name="action_clear_log">Clear</string>

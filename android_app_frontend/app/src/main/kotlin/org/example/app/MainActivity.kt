@@ -6,7 +6,7 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.ScrollView
 import android.widget.TextView
-import androidx.fragment.app.FragmentActivity
+import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Job
@@ -27,7 +27,7 @@ import org.example.app.ui.MainViewModel
  *
  * Note: This project intentionally uses classic Views/XML (no Compose).
  */
-class MainActivity : FragmentActivity() {
+class MainActivity : AppCompatActivity() {
 
     private lateinit var viewModel: MainViewModel
     private lateinit var biometricAuthenticator: BiometricAuthenticator
@@ -177,16 +177,10 @@ class MainActivity : FragmentActivity() {
                 }
 
                 is AuthState.Unlocked -> {
-                    textAuthState.text = "Auth state: Unlocked"
-                    textSessionInfo.text =
-                        "Access token expires at: ${state.session.accessTokenExpiresAtEpochMs}"
-                    setButtonsEnabled(
-                        canLogin = false,
-                        canLock = true,
-                        canUnlock = false,
-                        canCallProtected = true,
-                        canLogout = true,
-                    )
+                    // Navigate to Home once the user has successfully unlocked.
+                    // We finish() to prevent returning to the login screen via back.
+                    startActivity(android.content.Intent(this@MainActivity, HomeActivity::class.java))
+                    finish()
                 }
             }
         }
