@@ -91,10 +91,10 @@ class MainViewModel(
 
     // PUBLIC_INTERFACE
     /** Lock the current session (tokens remain stored). */
-    fun lock() {
+    fun lock(reason: LockReason = LockReason.UserInitiated) {
         viewModelScope.launch {
-            appendLog("Lock requested…")
-            when (val res = authManager.lock(reason = LockReason.UserInitiated)) {
+            appendLog("Lock requested (reason=$reason)…")
+            when (val res = authManager.lock(reason = reason)) {
                 AuthOpResult.Success -> appendLog("Locked.")
                 is AuthOpResult.Failure -> appendLog("Lock failed: ${res.error.message}")
             }

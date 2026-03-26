@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Style guide inspired: primary #3b82f6, success/accent #06b6d4, neutral #64748b -->
+    <color name="primary">#3B82F6</color>
+    <color name="primary_variant">#2563EB</color>
+    <color name="secondary">#06B6D4</color>
+</resources>

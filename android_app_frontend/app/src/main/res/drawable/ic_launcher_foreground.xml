@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- A simple "shield" mark -->
+    <path
+        android:fillColor="#3B82F6"
+        android:pathData="M54,10
+            L78,18
+            C78,43 72,67 54,82
+            C36,67 30,43 30,18
+            Z" />
+
+    <!-- Inner highlight -->
+    <path
+        android:fillColor="#06B6D4"
+        android:pathData="M54,20
+            L70,25
+            C69,45 64,62 54,70
+            C44,62 39,45 38,25
+            Z" />
+</vector>

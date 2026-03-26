@@ -81,19 +81,16 @@ class MainActivity : FragmentActivity() {
             return
         }
 
-        lifecycleScope.launch {
-            when (viewModel.authState.value) {
-                is AuthState.Unlocked -> {
-                    // ViewModel doesn't currently expose lock reason control; call lock() and log in VM.
-                    // We still convey backgrounding by triggering a lock and then prompting unlock.
-                    viewModel.lock()
-                    // Prompt will run if we end up locked.
-                    maybePromptUnlock()
-                }
-
-                is AuthState.Locked -> maybePromptUnlock()
-                AuthState.LoggedOut -> Unit
+        when (viewModel.authState.value) {
+            is AuthState.Unlocked -> {
+                // Lifecycle-aware behavior: background/foreground transitions can trigger a lock.
+                viewModel.lock(reason = LockReason.AppBackgrounded)
+                // Prompt will run if we end up locked.
+                maybePromptUnlock()
             }
+
+            is AuthState.Locked -> maybePromptUnlock()
+            AuthState.LoggedOut -> Unit
         }
     }
 
