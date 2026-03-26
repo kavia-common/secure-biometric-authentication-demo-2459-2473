@@ -25,10 +25,28 @@ class MockBackendInterceptor(
     private val clock: () -> Long = { System.currentTimeMillis() },
 ) : Interceptor {
 
-    // Simple in-memory "server" state
-    @Volatile private var activeAccessToken: String? = null
-    @Volatile private var activeRefreshToken: String? = null
-    @Volatile private var accessExpiryMs: Long = 0L
+    /**
+     * The demo uses two OkHttp clients:
+     *  - one for login/refresh
+     *  - one for normal requests (+ authenticator)
+     *
+     * If the mock backend stores "server state" (active tokens) per-interceptor instance,
+     * those two clients would talk to *different* fake servers and refresh/protected calls
+     * would fail.
+     *
+     * Therefore the "server state" must be shared process-wide.
+     */
+    private companion object ServerState {
+        @Volatile var activeAccessToken: String? = null
+        @Volatile var activeRefreshToken: String? = null
+        @Volatile var accessExpiryMs: Long = 0L
+
+        fun reset() {
+            activeAccessToken = null
+            activeRefreshToken = null
+            accessExpiryMs = 0L
+        }
+    }
 
     override fun intercept(chain: Interceptor.Chain): Response {
         val request = chain.request()
