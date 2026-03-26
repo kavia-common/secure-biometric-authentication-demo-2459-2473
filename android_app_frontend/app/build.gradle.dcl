@@ -8,6 +8,9 @@ androidApplication {
         // AndroidX BiometricPrompt (biometric + device credential fallback)
         implementation("androidx.biometric:biometric:1.2.0-alpha05")
 
+        // FragmentActivity required by BiometricPrompt wrapper
+        implementation("androidx.fragment:fragment-ktx:1.8.6")
+
         // EncryptedSharedPreferences / Android Keystore helpers
         implementation("androidx.security:security-crypto:1.1.0-alpha06")
 
