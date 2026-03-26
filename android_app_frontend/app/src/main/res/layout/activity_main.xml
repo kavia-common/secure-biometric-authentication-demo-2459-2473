@@ -5,7 +5,9 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:padding="16dp"
-    tools:context=".MainActivity">
+    tools:context=".MainActivity"
+    tools:device="pixel_7"
+    tools:theme="@style/Theme.SecureBiometricDemo">
 
     <TextView
         android:id="@+id/textAuthState"
