@@ -1,3 +1,21 @@
 <resources>
     <string name="app_name">Sample Declarative Gradle Android App</string>
+
+    <string name="auth_state_unknown">Auth state: (loading)</string>
+    <string name="session_info_placeholder">Session info will appear here.</string>
+
+    <string name="section_login">Login</string>
+    <string name="hint_username">Username</string>
+    <string name="hint_password">Password</string>
+    <string name="action_login">Login (stores tokens, then locks)</string>
+
+    <string name="section_session_actions">Session actions</string>
+    <string name="action_lock">Lock</string>
+    <string name="action_unlock">Unlock (biometric)</string>
+    <string name="action_call_protected">Call protected endpoint</string>
+    <string name="action_logout">Logout (clear tokens)</string>
+
+    <string name="section_status_log">Status log</string>
+    <string name="action_clear_log">Clear</string>
+    <string name="status_log_empty">No events yet.</string>
 </resources>
