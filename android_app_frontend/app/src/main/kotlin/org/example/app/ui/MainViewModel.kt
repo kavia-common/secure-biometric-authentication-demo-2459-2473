@@ -65,12 +65,22 @@ class MainViewModel(
      */
     fun login(username: String, password: String) {
         viewModelScope.launch {
-            appendLog("Login requested for user=$username …")
+            val u = username.trim()
+            val p = password
+
+            // The in-app mock backend accepts ANY non-empty username/password.
+            // Validate empties so users get an actionable message instead of a generic failure.
+            if (u.isBlank() || p.isBlank()) {
+                appendLog("Login blocked: enter any non-empty username and password (mock backend accepts any).")
+                return@launch
+            }
+
+            appendLog("Login requested for user=$u (mock backend: any credentials accepted)…")
             val res = authManager.login(
-                username = username,
-                password = password,
-                performLogin = { u, p ->
-                    val tr = apiClient.api.login(LoginRequest(username = u, password = p))
+                username = u,
+                password = p,
+                performLogin = { uu, pp ->
+                    val tr = apiClient.api.login(LoginRequest(username = uu, password = pp))
                     org.example.app.auth.models.AuthResult(
                         tokens = org.example.app.auth.models.SessionTokens(
                             accessToken = tr.accessToken,
@@ -84,7 +94,7 @@ class MainViewModel(
 
             when (res) {
                 AuthOpResult.Success -> appendLog("Login success. Session is now locked; unlock required.")
-                is AuthOpResult.Failure -> appendLog("Login failed: ${res.error.message}")
+                is AuthOpResult.Failure -> appendLog("Login failed (unexpected for mock-any-credentials): ${res.error.message}")
             }
         }
     }

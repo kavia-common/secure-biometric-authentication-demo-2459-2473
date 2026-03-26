@@ -49,6 +49,14 @@
         android:inputType="textPassword"
         android:importantForAutofill="yes" />
 
+    <TextView
+        android:id="@+id/textLoginHelp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:text="@string/login_help_any_creds"
+        android:textAppearance="?android:attr/textAppearanceSmall" />
+
     <Button
         android:id="@+id/btnLogin"
         android:layout_width="match_parent"

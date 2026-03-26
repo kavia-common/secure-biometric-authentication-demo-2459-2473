@@ -4,10 +4,11 @@
     <string name="auth_state_unknown">Auth state: (loading)</string>
     <string name="session_info_placeholder">Session info will appear here.</string>
 
-    <string name="section_login">Login</string>
-    <string name="hint_username">Username</string>
-    <string name="hint_password">Password</string>
-    <string name="action_login">Login (stores tokens, then locks)</string>
+    <string name="section_login">Login (mock: any username/password)</string>
+    <string name="hint_username">Username (any)</string>
+    <string name="hint_password">Password (any)</string>
+    <string name="action_login">Login (accepts any credentials; stores tokens, then locks)</string>
+    <string name="login_help_any_creds">Demo uses an in-app mock backend: any username/password will succeed.</string>
 
     <string name="section_session_actions">Session actions</string>
     <string name="action_lock">Lock</string>
