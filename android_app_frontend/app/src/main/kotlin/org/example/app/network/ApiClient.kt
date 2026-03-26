@@ -11,6 +11,7 @@ import org.example.app.network.auth.TokenRefreshAuthenticator
 import org.example.app.network.auth.TokenRefresher
 import org.example.app.network.mock.MockBackendInterceptor
 import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.converter.scalars.ScalarsConverterFactory
 
 /**
@@ -46,7 +47,9 @@ class ApiClient private constructor(
             val refreshRetrofit = Retrofit.Builder()
                 .baseUrl(BASE_URL)
                 .client(refreshOkHttp)
-                // Scalars converter is present as dependency; we aren't using JSON converters in this mock.
+                // Mock backend returns JSON; Gson is required to deserialize DTOs.
+                // Scalars remains as a fallback for any plain-text endpoints we might add later.
+                .addConverterFactory(GsonConverterFactory.create())
                 .addConverterFactory(ScalarsConverterFactory.create())
                 .build()
 
@@ -69,6 +72,7 @@ class ApiClient private constructor(
             val retrofit = Retrofit.Builder()
                 .baseUrl(BASE_URL)
                 .client(mainOkHttp)
+                .addConverterFactory(GsonConverterFactory.create())
                 .addConverterFactory(ScalarsConverterFactory.create())
                 .build()
 

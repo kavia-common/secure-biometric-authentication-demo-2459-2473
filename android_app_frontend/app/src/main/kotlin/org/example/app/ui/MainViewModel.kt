@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import org.example.app.auth.AuthManager
+import org.example.app.auth.models.AuthError
 import org.example.app.auth.models.AuthOpResult
 import org.example.app.auth.models.AuthState
 import org.example.app.auth.models.LockReason
@@ -94,7 +95,10 @@ class MainViewModel(
 
             when (res) {
                 AuthOpResult.Success -> appendLog("Login success. Session is now locked; unlock required.")
-                is AuthOpResult.Failure -> appendLog("Login failed (unexpected for mock-any-credentials): ${res.error.message}")
+                is AuthOpResult.Failure -> {
+                    val detail = res.error.toDebugDetail()
+                    appendLog("Login failed (unexpected for mock-any-credentials): ${res.error.message}${detail?.let { " | cause=$it" }.orEmpty()}")
+                }
             }
         }
     }
@@ -183,4 +187,16 @@ private fun AuthState.toUiLabel(): String {
         is AuthState.Locked -> "Locked (${this.reason})"
         is AuthState.Unlocked -> "Unlocked (exp=${this.session.accessTokenExpiresAtEpochMs})"
     }
+}
+
+private fun AuthError.toDebugDetail(): String? {
+    val cause = when (this) {
+        is AuthError.Network -> this.cause
+        is AuthError.Storage -> this.cause
+        is AuthError.Unknown -> this.cause
+        else -> null
+    } ?: return null
+
+    val msg = cause.message?.takeIf { it.isNotBlank() }
+    return if (msg == null) cause::class.java.simpleName else "${cause::class.java.simpleName}: $msg"
 }
