@@ -1,5 +1,6 @@
 # Build outputs
 **/build/
+**/app/build/
 
 # Android Studio / IntelliJ
 **/.idea/
