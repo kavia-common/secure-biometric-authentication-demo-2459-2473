@@ -20,6 +20,18 @@
     <string name="title_home">Home</string>
     <string name="home_body">You are signed in.</string>
 
+    <string name="calculator_title">Calculator</string>
+    <string name="hint_first_number">First number</string>
+    <string name="hint_second_number">Second number</string>
+    <string name="action_add">Add</string>
+    <string name="action_subtract">Subtract</string>
+    <string name="action_multiply">Multiply</string>
+    <string name="action_divide">Divide</string>
+    <string name="action_clear_calc">Clear</string>
+    <string name="calculator_result_prefix">Result:</string>
+    <string name="error_invalid_number">Enter valid numbers.</string>
+    <string name="error_divide_by_zero">Cannot divide by zero.</string>
+
     <string name="section_status_log">Status log</string>
     <string name="action_clear_log">Clear</string>
     <string name="status_log_empty">No events yet.</string>

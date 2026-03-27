@@ -47,28 +47,20 @@ class MainActivity : AppCompatActivity() {
     private lateinit var textLog: TextView
     private lateinit var scrollLog: ScrollView
 
-    /**
-     * Optional behavior: when enabled, the app will lock when it returns to foreground.
-     *
-     * Implemented as: onResume() if currently Unlocked -> lock(AppBackgrounded) then prompt unlock.
-     *
-     * IMPORTANT:
-     * BiometricPrompt (and device-credential fallback) can cause Activity resume transitions while
-     * auth state changes are being processed. If we immediately lock again in onResume(), we can
-     * race with the Unlocked -> Home navigation and end up never leaving MainActivity.
-     *
-     * To avoid that, we suppress the next onResume lock immediately after a successful unlock.
-     */
-    private val lockOnResumeEnabled: Boolean = true
-
     private var observeJob: Job? = null
     private var biometricPromptInFlight: Boolean = false
 
     /**
-     * When true, MainActivity will not auto-lock in onResume() once.
-     * This is set right after biometric/device-credential success to allow routing to HomeActivity.
+     * True once this Activity has been backgrounded (onStop), and not yet returned to foreground.
+     *
+     * We use this to enforce the policy:
+     * - Only re-lock when the app is backgrounded.
+     * - Only prompt biometrics when returning from background.
+     *
+     * This avoids repeated biometric prompts while the app remains active and the Activity
+     * goes through normal resume transitions (including those induced by BiometricPrompt).
      */
-    private var suppressNextResumeLock: Boolean = false
+    private var wasBackgrounded: Boolean = false
 
     /** Prevent double navigation if state is re-emitted. */
     private var didNavigateToHome: Boolean = false
@@ -89,32 +81,29 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    override fun onResume() {
-        super.onResume()
+    override fun onStart() {
+        super.onStart()
 
-        // If biometric/device-credential just succeeded, allow the Unlocked observer to navigate
-        // to Home without immediately re-locking in this lifecycle callback.
-        if (suppressNextResumeLock) {
-            suppressNextResumeLock = false
-            return
-        }
-
-        if (!lockOnResumeEnabled) {
-            maybePromptUnlock()
-            return
-        }
+        // Only enforce biometric unlock when we are *returning from background*.
+        // Do not prompt repeatedly while active.
+        if (!wasBackgrounded) return
+        wasBackgrounded = false
 
         when (viewModel.authState.value) {
             is AuthState.Unlocked -> {
-                // Lifecycle-aware behavior: background/foreground transitions can trigger a lock.
                 viewModel.lock(reason = LockReason.AppBackgrounded)
-                // Prompt will run if we end up locked.
                 maybePromptUnlock()
             }
-
             is AuthState.Locked -> maybePromptUnlock()
             AuthState.LoggedOut -> Unit
         }
+    }
+
+    override fun onStop() {
+        // Mark that we are leaving foreground. Actual lock will be applied on return (onStart),
+        // so we only ever prompt biometrics *on return from background*.
+        wasBackgrounded = true
+        super.onStop()
     }
 
     override fun onDestroy() {
@@ -259,8 +248,6 @@ class MainActivity : AppCompatActivity() {
                     subtitle = "Verify it’s you to continue (biometric or device credential).",
                     onSuccess = {
                         biometricPromptInFlight = false
-                        // Prevent onResume() from immediately locking again while we route to Home.
-                        suppressNextResumeLock = true
                         // Only after successful user-presence verification do we unlock.
                         viewModel.unlock()
                     },
