@@ -145,15 +145,26 @@ class HomeActivity : AppCompatActivity() {
                     startActivity(intent)
                     finish()
                 }
+
                 is AuthState.Locked -> {
-                    // If session becomes locked again, send user back to MainActivity
-                    // which owns the biometric prompt + unlock flow in this demo.
-                    val intent = Intent(this@HomeActivity, MainActivity::class.java).apply {
-                        addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-                    }
-                    startActivity(intent)
-                    finish()
+                    // IMPORTANT:
+                    // Do NOT automatically navigate away from Home on "Locked".
+                    //
+                    // On some devices/OS versions, lifecycle transitions around navigation can cause
+                    // brief Locked emissions (e.g., background/foreground churn). If we route away
+                    // here, the user experiences an immediate "Home -> Login/Main" bounce loop.
+                    //
+                    // Policy:
+                    // - Home remains visible while the session is locked.
+                    // - Unlock flow is owned by MainActivity and is triggered when returning from
+                    //   background (per MainActivity's onStart policy) or via explicit user action
+                    //   (not shown on Home in this demo).
+                    //
+                    // If desired, we could display a small "Session locked" hint in the UI,
+                    // but we intentionally keep this minimal and non-disruptive.
+                    Unit
                 }
+
                 is AuthState.Unlocked -> Unit // Stay on Home
             }
         }
