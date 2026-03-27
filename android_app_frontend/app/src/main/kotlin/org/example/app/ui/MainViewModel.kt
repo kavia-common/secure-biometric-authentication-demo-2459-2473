@@ -94,7 +94,12 @@ class MainViewModel(
             )
 
             when (res) {
-                AuthOpResult.Success -> appendLog("Login success. Session is now locked; unlock required.")
+                AuthOpResult.Success ->
+                    appendLog(
+                        "Login success. Session is now unlocked; routing to Home. " +
+                            "Biometric/device credential will be required only when returning from background."
+                    )
+
                 is AuthOpResult.Failure -> {
                     val detail = res.error.toDebugDetail()
                     appendLog("Login failed (unexpected for mock-any-credentials): ${res.error.message}${detail?.let { " | cause=$it" }.orEmpty()}")

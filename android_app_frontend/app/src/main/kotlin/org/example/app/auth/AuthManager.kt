@@ -71,7 +71,15 @@ class AuthManager private constructor(
      * Perform "login" by exchanging credentials for tokens.
      *
      * For the demo app, the caller provides [performLogin] that returns tokens (e.g., Retrofit call).
-     * On success: persist tokens and set state to Locked (requiring biometric/device credential unlock).
+     *
+     * On success:
+     * - Persist tokens
+     * - Set state to Unlocked
+     *
+     * Rationale for this demo:
+     * - Username/password login should route directly to Home (no immediate biometric prompt).
+     * - Biometric/device-credential should be required only when returning from background
+     *   while a session is active (enforced by Activity lifecycle policy).
      */
     suspend fun login(
         username: String,
@@ -81,7 +89,7 @@ class AuthManager private constructor(
         try {
             val result = performLogin(username, password)
             tokenStore.save(result.tokens)
-            sessionRepo.setLocked(result.tokens, reason = LockReason.BiometricRequired)
+            sessionRepo.setUnlocked(result.tokens)
             AuthOpResult.Success
         } catch (t: Throwable) {
             AuthOpResult.Failure(AuthError.Network("Login failed", t))

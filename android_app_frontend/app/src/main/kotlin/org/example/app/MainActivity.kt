@@ -91,10 +91,17 @@ class MainActivity : AppCompatActivity() {
 
         when (viewModel.authState.value) {
             is AuthState.Unlocked -> {
+                // We were actively using the app, then went to background.
+                // On return, lock and require user presence verification.
                 viewModel.lock(reason = LockReason.AppBackgrounded)
                 maybePromptUnlock()
             }
-            is AuthState.Locked -> maybePromptUnlock()
+
+            is AuthState.Locked -> {
+                // Session is already locked; returning from background should prompt unlock.
+                maybePromptUnlock()
+            }
+
             AuthState.LoggedOut -> Unit
         }
     }
@@ -184,8 +191,13 @@ class MainActivity : AppCompatActivity() {
                         canCallProtected = true,
                         canLogout = true,
                     )
-                    // Auto prompt when entering locked state.
-                    maybePromptUnlock()
+                    // IMPORTANT:
+                    // Do NOT auto-prompt biometrics merely because we entered Locked state.
+                    // Policy for this demo:
+                    // - After successful username/password login, route to Home immediately (no prompt).
+                    // - Require biometric/device credential only when returning from background
+                    //   while a session is active (handled in onStart()).
+                    // - Users can also manually unlock via the Unlock button.
                 }
 
                 is AuthState.Unlocked -> {
