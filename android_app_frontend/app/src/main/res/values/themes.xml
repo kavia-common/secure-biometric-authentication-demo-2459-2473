@@ -1,18 +1,68 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!--
-      App theme wiring.
-      We use a MaterialComponents theme to ensure BiometricPrompt and modern widgets
-      have the correct styling on all supported Android versions.
+      Material Design 3 (Material You) theme wiring.
 
-      NOTE: This project uses classic Views/XML (no Compose).
+      This project uses classic Views/XML (no Compose). Material3 still provides:
+      - modern color system + typography
+      - better default component styling for Material widgets (MaterialButton, TextInputLayout, etc.)
+
+      NOTE: We keep NoActionBar because HomeActivity hosts its own Toolbar/TopAppBar.
     -->
-    <style name="Theme.SecureBiometricDemo" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-        <item name="colorPrimary">@color/primary</item>
-        <item name="colorPrimaryVariant">@color/primary_variant</item>
-        <item name="colorSecondary">@color/secondary</item>
+    <style name="Theme.SecureBiometricDemo" parent="Theme.Material3.DayNight.NoActionBar">
+        <!-- Core brand colors (used by Material3 as seeds/fallbacks on older Android versions). -->
+        <item name="colorPrimary">@color/md_theme_primary</item>
+        <item name="colorOnPrimary">@color/md_theme_onPrimary</item>
+        <item name="colorPrimaryContainer">@color/md_theme_primaryContainer</item>
+        <item name="colorOnPrimaryContainer">@color/md_theme_onPrimaryContainer</item>
 
-        <item name="android:statusBarColor">@color/primary_variant</item>
-        <item name="android:navigationBarColor">@android:color/black</item>
+        <item name="colorSecondary">@color/md_theme_secondary</item>
+        <item name="colorOnSecondary">@color/md_theme_onSecondary</item>
+        <item name="colorSecondaryContainer">@color/md_theme_secondaryContainer</item>
+        <item name="colorOnSecondaryContainer">@color/md_theme_onSecondaryContainer</item>
+
+        <item name="colorTertiary">@color/md_theme_tertiary</item>
+        <item name="colorOnTertiary">@color/md_theme_onTertiary</item>
+
+        <item name="colorBackground">@color/md_theme_background</item>
+        <item name="colorOnBackground">@color/md_theme_onBackground</item>
+        <item name="colorSurface">@color/md_theme_surface</item>
+        <item name="colorOnSurface">@color/md_theme_onSurface</item>
+
+        <item name="colorError">@color/md_theme_error</item>
+        <item name="colorOnError">@color/md_theme_onError</item>
+
+        <!-- System bars -->
+        <item name="android:statusBarColor">@color/md_theme_surface</item>
+        <item name="android:navigationBarColor">@color/md_theme_surface</item>
+
+        <!-- Optional: improve contrast on light theme -->
+        <item name="android:windowLightStatusBar">true</item>
+
+        <!-- Rounded components -->
+        <item name="shapeAppearanceSmallComponent">@style/ShapeAppearance.SecureBiometricDemo.Small</item>
+        <item name="shapeAppearanceMediumComponent">@style/ShapeAppearance.SecureBiometricDemo.Medium</item>
+        <item name="shapeAppearanceLargeComponent">@style/ShapeAppearance.SecureBiometricDemo.Large</item>
+
+        <!-- Default style hooks for Material widgets we use in layouts -->
+        <item name="materialButtonStyle">@style/Widget.SecureBiometricDemo.Button</item>
+    </style>
+
+    <style name="ShapeAppearance.SecureBiometricDemo.Small" parent="ShapeAppearance.Material3.Corner.Small">
+        <item name="cornerSize">12dp</item>
+    </style>
+
+    <style name="ShapeAppearance.SecureBiometricDemo.Medium" parent="ShapeAppearance.Material3.Corner.Medium">
+        <item name="cornerSize">16dp</item>
+    </style>
+
+    <style name="ShapeAppearance.SecureBiometricDemo.Large" parent="ShapeAppearance.Material3.Corner.Large">
+        <item name="cornerSize">20dp</item>
+    </style>
+
+    <style name="Widget.SecureBiometricDemo.Button" parent="Widget.Material3.Button">
+        <!-- Slightly taller buttons for a more modern look -->
+        <item name="android:minHeight">48dp</item>
+        <item name="cornerRadius">14dp</item>
     </style>
 </resources>
