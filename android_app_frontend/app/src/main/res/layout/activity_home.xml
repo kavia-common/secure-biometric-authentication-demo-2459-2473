@@ -5,7 +5,7 @@
     android:id="@+id/homeScroll"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="?attr/colorBackground"
+    android:background="?android:attr/colorBackground"
     android:fillViewport="true"
     tools:context=".HomeActivity"
     tools:device="pixel_7"

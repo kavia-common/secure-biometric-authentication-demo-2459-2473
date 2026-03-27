@@ -5,7 +5,7 @@
     android:id="@+id/rootScroll"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="?attr/colorBackground"
+    android:background="?android:attr/colorBackground"
     android:fillViewport="true"
     tools:context=".MainActivity"
     tools:device="pixel_7"
