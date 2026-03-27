@@ -62,8 +62,8 @@ class MainActivity : AppCompatActivity() {
      */
     private var wasBackgrounded: Boolean = false
 
-    /** Prevent double navigation if state is re-emitted. */
-    private var didNavigateToHome: Boolean = false
+    // Prevent duplicate navigation via task flags; avoid a sticky boolean that can suppress routing
+    // after Activity recreation (e.g., config change / process recreation / biometric transitions).
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -201,11 +201,8 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 is AuthState.Unlocked -> {
-                    if (didNavigateToHome) return@collectLatest
-                    didNavigateToHome = true
-
                     // Navigate to Home once the user has successfully unlocked.
-                    // Clear back stack so back does not return to MainActivity.
+                    // Use CLEAR_TASK/NEW_TASK to make this idempotent and avoid back-stack issues.
                     val intent = android.content.Intent(this@MainActivity, HomeActivity::class.java).apply {
                         addFlags(
                             android.content.Intent.FLAG_ACTIVITY_NEW_TASK or
