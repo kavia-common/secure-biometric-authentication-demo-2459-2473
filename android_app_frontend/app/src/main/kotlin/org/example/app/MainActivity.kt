@@ -6,9 +6,12 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.ScrollView
 import android.widget.TextView
+import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -50,6 +53,13 @@ class MainActivity : AppCompatActivity() {
     private var observeJob: Job? = null
 
     /**
+     * Guards against double-navigation when multiple triggers observe Unlocked (e.g.:
+     * - auth state collector
+     * - onStart() idempotent route)
+     */
+    private var isRoutingToHome: Boolean = false
+
+    /**
      * True while a BiometricPrompt is currently showing.
      *
      * We persist this across configuration changes so we don't accidentally launch multiple prompts
@@ -84,8 +94,11 @@ class MainActivity : AppCompatActivity() {
         wireClicks()
 
         observeJob = lifecycleScope.launch {
-            launch { observeAuthState() }
-            launch { observeStatusLog() }
+            // Collect flows only while STARTED so we don't miss transitions due to prompt/lifecycle churn.
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                launch { observeAuthState() }
+                launch { observeStatusLog() }
+            }
         }
     }
 
@@ -224,15 +237,8 @@ class MainActivity : AppCompatActivity() {
 
                 is AuthState.Unlocked -> {
                     // Navigate to Home once the user has successfully unlocked.
-                    // Use CLEAR_TASK/NEW_TASK to make this idempotent and avoid back-stack issues.
-                    val intent = android.content.Intent(this@MainActivity, HomeActivity::class.java).apply {
-                        addFlags(
-                            android.content.Intent.FLAG_ACTIVITY_NEW_TASK or
-                                android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK
-                        )
-                    }
-                    startActivity(intent)
-                    finish()
+                    // Keep this idempotent and guarded to avoid duplicate starts.
+                    routeToHome()
                 }
             }
         }
@@ -311,12 +317,15 @@ class MainActivity : AppCompatActivity() {
 
     private fun routeToHomeIfUnlocked() {
         if (viewModel.authState.value !is AuthState.Unlocked) return
+        routeToHome()
+    }
 
-        val intent = android.content.Intent(this@MainActivity, HomeActivity::class.java).apply {
-            addFlags(
-                android.content.Intent.FLAG_ACTIVITY_NEW_TASK or
-                    android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK
-            )
+    private fun routeToHome() {
+        if (isRoutingToHome) return
+        isRoutingToHome = true
+
+        val intent = Intent(this@MainActivity, HomeActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
         }
         startActivity(intent)
         finish()
