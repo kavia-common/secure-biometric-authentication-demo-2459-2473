@@ -48,6 +48,14 @@ class MainActivity : AppCompatActivity() {
     private lateinit var scrollLog: ScrollView
 
     private var observeJob: Job? = null
+
+    /**
+     * True while a BiometricPrompt is currently showing.
+     *
+     * We persist this across configuration changes so we don't accidentally launch multiple prompts
+     * on rotation; and we also defensively clear it in [onStart] because the prompt can be
+     * dismissed due to process death / app restart / task switching where we won't receive callbacks.
+     */
     private var biometricPromptInFlight: Boolean = false
 
     /**
@@ -62,15 +70,15 @@ class MainActivity : AppCompatActivity() {
      */
     private var wasBackgrounded: Boolean = false
 
-    // Prevent duplicate navigation via task flags; avoid a sticky boolean that can suppress routing
-    // after Activity recreation (e.g., config change / process recreation / biometric transitions).
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
         biometricAuthenticator = BiometricAuthenticator(this)
         viewModel = ViewModelProvider(this)[MainViewModel::class.java]
+
+        biometricPromptInFlight =
+            savedInstanceState?.getBoolean(STATE_KEY_BIOMETRIC_IN_FLIGHT, false) ?: false
 
         bindViews()
         wireClicks()
@@ -83,6 +91,15 @@ class MainActivity : AppCompatActivity() {
 
     override fun onStart() {
         super.onStart()
+
+        // If we are already unlocked (e.g., biometric succeeded during an Activity transition),
+        // force routing to Home. This makes "Unlocked -> Home" idempotent and resilient to
+        // lifecycle edge cases.
+        routeToHomeIfUnlocked()
+
+        // The biometric prompt can be dismissed without us receiving a callback if the app
+        // process is killed/restarted. Clear this so users can retry unlock.
+        biometricPromptInFlight = false
 
         // Only enforce biometric unlock when we are *returning from background*.
         // Do not prompt repeatedly while active.
@@ -104,6 +121,11 @@ class MainActivity : AppCompatActivity() {
 
             AuthState.LoggedOut -> Unit
         }
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        outState.putBoolean(STATE_KEY_BIOMETRIC_IN_FLIGHT, biometricPromptInFlight)
+        super.onSaveInstanceState(outState)
     }
 
     override fun onStop() {
@@ -263,9 +285,16 @@ class MainActivity : AppCompatActivity() {
                     onFailure = {
                         // Non-fatal; user can try again inside prompt.
                     },
-                    onError = { _, _ ->
+                    onError = { _, message ->
+                        // Clear in-flight so the user can retry via Unlock button.
                         biometricPromptInFlight = false
-                        // If user canceled and forced unlock was requested, remain locked.
+                        // Stay locked on cancel/error. Message is available for logging if desired.
+                        // (We intentionally do not toast here to keep demo UI simple.)
+                        @Suppress("UNUSED_VARIABLE")
+                        val unused = message
+                        if (force) {
+                            // No-op: user initiated unlock; remaining locked is expected on cancel.
+                        }
                     },
                 )
             }
@@ -278,5 +307,22 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
+    }
+
+    private fun routeToHomeIfUnlocked() {
+        if (viewModel.authState.value !is AuthState.Unlocked) return
+
+        val intent = android.content.Intent(this@MainActivity, HomeActivity::class.java).apply {
+            addFlags(
+                android.content.Intent.FLAG_ACTIVITY_NEW_TASK or
+                    android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK
+            )
+        }
+        startActivity(intent)
+        finish()
+    }
+
+    private companion object {
+        private const val STATE_KEY_BIOMETRIC_IN_FLIGHT = "state_biometric_in_flight"
     }
 }
