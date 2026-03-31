@@ -6,9 +6,12 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.ScrollView
 import android.widget.TextView
+import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -48,6 +51,21 @@ class MainActivity : AppCompatActivity() {
     private lateinit var scrollLog: ScrollView
 
     private var observeJob: Job? = null
+
+    /**
+     * Guards against double-navigation when multiple triggers observe Unlocked (e.g.:
+     * - auth state collector
+     * - onStart() idempotent route)
+     */
+    private var isRoutingToHome: Boolean = false
+
+    /**
+     * True while a BiometricPrompt is currently showing.
+     *
+     * We persist this across configuration changes so we don't accidentally launch multiple prompts
+     * on rotation; and we also defensively clear it in [onStart] because the prompt can be
+     * dismissed due to process death / app restart / task switching where we won't receive callbacks.
+     */
     private var biometricPromptInFlight: Boolean = false
 
     /**
@@ -62,9 +80,6 @@ class MainActivity : AppCompatActivity() {
      */
     private var wasBackgrounded: Boolean = false
 
-    // Prevent duplicate navigation via task flags; avoid a sticky boolean that can suppress routing
-    // after Activity recreation (e.g., config change / process recreation / biometric transitions).
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -72,17 +87,32 @@ class MainActivity : AppCompatActivity() {
         biometricAuthenticator = BiometricAuthenticator(this)
         viewModel = ViewModelProvider(this)[MainViewModel::class.java]
 
+        biometricPromptInFlight =
+            savedInstanceState?.getBoolean(STATE_KEY_BIOMETRIC_IN_FLIGHT, false) ?: false
+
         bindViews()
         wireClicks()
 
         observeJob = lifecycleScope.launch {
-            launch { observeAuthState() }
-            launch { observeStatusLog() }
+            // Collect flows only while STARTED so we don't miss transitions due to prompt/lifecycle churn.
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                launch { observeAuthState() }
+                launch { observeStatusLog() }
+            }
         }
     }
 
     override fun onStart() {
         super.onStart()
+
+        // If we are already unlocked (e.g., biometric succeeded during an Activity transition),
+        // force routing to Home. This makes "Unlocked -> Home" idempotent and resilient to
+        // lifecycle edge cases.
+        routeToHomeIfUnlocked()
+
+        // The biometric prompt can be dismissed without us receiving a callback if the app
+        // process is killed/restarted. Clear this so users can retry unlock.
+        biometricPromptInFlight = false
 
         // Only enforce biometric unlock when we are *returning from background*.
         // Do not prompt repeatedly while active.
@@ -104,6 +134,11 @@ class MainActivity : AppCompatActivity() {
 
             AuthState.LoggedOut -> Unit
         }
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        outState.putBoolean(STATE_KEY_BIOMETRIC_IN_FLIGHT, biometricPromptInFlight)
+        super.onSaveInstanceState(outState)
     }
 
     override fun onStop() {
@@ -202,15 +237,8 @@ class MainActivity : AppCompatActivity() {
 
                 is AuthState.Unlocked -> {
                     // Navigate to Home once the user has successfully unlocked.
-                    // Use CLEAR_TASK/NEW_TASK to make this idempotent and avoid back-stack issues.
-                    val intent = android.content.Intent(this@MainActivity, HomeActivity::class.java).apply {
-                        addFlags(
-                            android.content.Intent.FLAG_ACTIVITY_NEW_TASK or
-                                android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK
-                        )
-                    }
-                    startActivity(intent)
-                    finish()
+                    // Keep this idempotent and guarded to avoid duplicate starts.
+                    routeToHome()
                 }
             }
         }
@@ -263,9 +291,16 @@ class MainActivity : AppCompatActivity() {
                     onFailure = {
                         // Non-fatal; user can try again inside prompt.
                     },
-                    onError = { _, _ ->
+                    onError = { _, message ->
+                        // Clear in-flight so the user can retry via Unlock button.
                         biometricPromptInFlight = false
-                        // If user canceled and forced unlock was requested, remain locked.
+                        // Stay locked on cancel/error. Message is available for logging if desired.
+                        // (We intentionally do not toast here to keep demo UI simple.)
+                        @Suppress("UNUSED_VARIABLE")
+                        val unused = message
+                        if (force) {
+                            // No-op: user initiated unlock; remaining locked is expected on cancel.
+                        }
                     },
                 )
             }
@@ -278,5 +313,25 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
+    }
+
+    private fun routeToHomeIfUnlocked() {
+        if (viewModel.authState.value !is AuthState.Unlocked) return
+        routeToHome()
+    }
+
+    private fun routeToHome() {
+        if (isRoutingToHome) return
+        isRoutingToHome = true
+
+        val intent = Intent(this@MainActivity, HomeActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+        }
+        startActivity(intent)
+        finish()
+    }
+
+    private companion object {
+        private const val STATE_KEY_BIOMETRIC_IN_FLIGHT = "state_biometric_in_flight"
     }
 }

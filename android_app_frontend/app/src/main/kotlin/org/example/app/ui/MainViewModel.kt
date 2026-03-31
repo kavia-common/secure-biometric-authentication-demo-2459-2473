@@ -1,6 +1,7 @@
 package org.example.app.ui
 
 import android.app.Application
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -8,6 +9,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import org.example.app.SecureBiometricDemoApp
 import org.example.app.auth.AuthManager
 import org.example.app.auth.models.AuthError
 import org.example.app.auth.models.AuthOpResult
@@ -25,12 +27,18 @@ import org.example.app.network.api.RefreshRequest
  * - Expose current AuthState for rendering.
  * - Provide user actions: login, lock, unlock, call protected endpoint, logout.
  * - Maintain a UI-friendly status log.
+ *
+ * Important architectural note:
+ * This ViewModel MUST use the process-wide AuthManager from [SecureBiometricDemoApp], otherwise
+ * MainActivity and HomeActivity will observe different auth states and navigation will be flaky.
  */
 class MainViewModel(
     application: Application,
 ) : AndroidViewModel(application) {
 
-    private val authManager: AuthManager = AuthManager.create(application)
+    private val authManager: AuthManager =
+        (application as SecureBiometricDemoApp).authManager
+
     private val apiClient: ApiClient = ApiClient.create(application)
 
     private val _authState = MutableStateFlow<AuthState>(AuthState.LoggedOut)
@@ -45,15 +53,24 @@ class MainViewModel(
             authManager.authStateFlow().collectLatest { state ->
                 _authState.value = state
                 appendLog("Auth state: ${state.toUiLabel()}")
+                Log.d(TAG, "authState => ${state.toUiLabel()}")
             }
         }
 
         // Load persisted session; if tokens exist we start Locked (biometric required).
         viewModelScope.launch {
             appendLog("Initializing from secure storage…")
+            Log.d(TAG, "initializeFromStorage() start")
             when (val res = authManager.initializeFromStorage()) {
-                AuthOpResult.Success -> appendLog("Initialized.")
-                is AuthOpResult.Failure -> appendLog("Init failed: ${res.error.message}")
+                AuthOpResult.Success -> {
+                    appendLog("Initialized.")
+                    Log.d(TAG, "initializeFromStorage() success")
+                }
+
+                is AuthOpResult.Failure -> {
+                    appendLog("Init failed: ${res.error.message}")
+                    Log.w(TAG, "initializeFromStorage() failed: ${res.error.message}")
+                }
             }
         }
     }
@@ -62,7 +79,8 @@ class MainViewModel(
     /**
      * Perform demo login via Retrofit mock API and persist tokens.
      *
-     * Note: on success AuthManager transitions to Locked to require user presence verification.
+     * On success the shared AuthManager transitions to Unlocked, which MainActivity observes and
+     * routes to Home.
      */
     fun login(username: String, password: String) {
         viewModelScope.launch {
@@ -77,6 +95,8 @@ class MainViewModel(
             }
 
             appendLog("Login requested for user=$u (mock backend: any credentials accepted)…")
+            Log.d(TAG, "login() requested user=$u")
+
             val res = authManager.login(
                 username = u,
                 password = p,
@@ -94,15 +114,18 @@ class MainViewModel(
             )
 
             when (res) {
-                AuthOpResult.Success ->
+                AuthOpResult.Success -> {
                     appendLog(
                         "Login success. Session is now unlocked; routing to Home. " +
                             "Biometric/device credential will be required only when returning from background."
                     )
+                    Log.d(TAG, "login() success")
+                }
 
                 is AuthOpResult.Failure -> {
                     val detail = res.error.toDebugDetail()
                     appendLog("Login failed (unexpected for mock-any-credentials): ${res.error.message}${detail?.let { " | cause=$it" }.orEmpty()}")
+                    Log.w(TAG, "login() failed: ${res.error.message}")
                 }
             }
         }
@@ -113,6 +136,7 @@ class MainViewModel(
     fun lock(reason: LockReason = LockReason.UserInitiated) {
         viewModelScope.launch {
             appendLog("Lock requested (reason=$reason)…")
+            Log.d(TAG, "lock() requested reason=$reason")
             when (val res = authManager.lock(reason = reason)) {
                 AuthOpResult.Success -> appendLog("Locked.")
                 is AuthOpResult.Failure -> appendLog("Lock failed: ${res.error.message}")
@@ -129,6 +153,7 @@ class MainViewModel(
     fun unlock() {
         viewModelScope.launch {
             appendLog("Unlock requested…")
+            Log.d(TAG, "unlock() requested")
             when (val res = authManager.unlock()) {
                 AuthOpResult.Success -> appendLog("Unlocked.")
                 is AuthOpResult.Failure -> appendLog("Unlock failed: ${res.error.message}")
@@ -163,6 +188,7 @@ class MainViewModel(
     fun logout() {
         viewModelScope.launch {
             appendLog("Logout requested…")
+            Log.d(TAG, "logout() requested")
             when (val res = authManager.logout()) {
                 AuthOpResult.Success -> appendLog("Logged out; tokens cleared.")
                 is AuthOpResult.Failure -> appendLog("Logout failed: ${res.error.message}")
@@ -183,6 +209,10 @@ class MainViewModel(
         val entry = "• [$now] $message"
         val updated = (_statusLog.value + entry).takeLast(200)
         _statusLog.value = updated
+    }
+
+    private companion object {
+        private const val TAG = "MainViewModel"
     }
 }
 
